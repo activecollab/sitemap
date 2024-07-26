@@ -106,7 +106,8 @@ trait NodeMiddlewareTrait
 
     public function json(
         JsonSerializable|array $data,
-        ResponseInterface $response = null
+        int $statusCode = 200,
+        ResponseInterface $response = null,
     ): ResponseInterface
     {
         if (empty($response)) {
@@ -116,7 +117,15 @@ trait NodeMiddlewareTrait
         $response = $response->withHeader('Content-Type', 'application/json');
         $response->getBody()->write(json_encode($data));
 
-        return $response->withStatus(200);
+        return $response->withStatus($statusCode);
+    }
+
+    public function created(
+        JsonSerializable|array $entity,
+        ResponseInterface $response = null,
+    ): ResponseInterface
+    {
+        return $this->json($entity, 201, $response);
     }
 
     public function movedToRoute(

@@ -39,7 +39,13 @@ interface NodeMiddlewareInterface extends ContainerAccessInterface, MiddlewareIn
 
     public function json(
         JsonSerializable|array $data,
-        ResponseInterface $response = null
+        int $statusCode = 200,
+        ResponseInterface $response = null,
+    ): ResponseInterface;
+
+    public function created(
+        JsonSerializable|array $entity,
+        ResponseInterface $response = null,
     ): ResponseInterface;
 
     public function movedToRoute(
