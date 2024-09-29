@@ -17,19 +17,12 @@ use Psr\Http\Message\ServerRequestInterface;
 
 class TemplateHandler extends Handler implements TemplateHandlerInterface
 {
-    private TemplateEngineInterface $templateEngine;
-    private string $templateName;
-    private array $templateAttributes;
-
     public function __construct(
-        TemplateEngineInterface $templateEngine,
-        string $templateName,
-        array $templateAttributes = []
+        private TemplateEngineInterface $templateEngine,
+        private string $templateName,
+        private array $templateAttributes = []
     )
     {
-        $this->templateEngine = $templateEngine;
-        $this->templateAttributes = $templateAttributes;
-        $this->templateName = $templateName;
     }
 
     public function __invoke(
