@@ -27,8 +27,8 @@
     },
     "autoload": {
         "psr-4": {
-            "ActiveCollab\\Sitermap\\": "src",
-            "ActiveCollab\\Sitermap\\Test\\": "test/src"
+            "ActiveCollab\\Sitemap\\": "src",
+            "ActiveCollab\\Sitemap\\Test\\": "test/src"
         }
     }
 }
