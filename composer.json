@@ -23,7 +23,11 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.0",
+        "guzzlehttp/guzzle": "^7.4",
         "phpunit/phpunit": "~9.0"
+    },
+    "suggest": {
+        "guzzlehttp/guzzle": "To use NodeMiddlewareTester"
     },
     "autoload": {
         "psr-4": {
