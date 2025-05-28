@@ -8,54 +8,22 @@
 
 declare(strict_types=1);
 
-namespace ActiveCollab\Sitemap\NodeMiddleware;
+namespace ActiveCollab\Sitemap\RequestHandler;
 
-use ActiveCollab\ContainerAccess\ContainerAccessInterface\Implementation as ContainerAccessImplementation;
+use ActiveCollab\Sitemap\NodeMiddleware\NodeMiddlewareInterface;
 use ActiveCollab\Sitemap\NodeMiddleware\TemplateVariablesProcessor\TemplateVariablesProcessor;
 use ActiveCollab\Sitemap\NodeMiddleware\TemplateVariablesProcessor\TemplateVariablesProcessorInterface;
+use ActiveCollab\Sitemap\Sitemap\SitemapInterface;
 use ActiveCollab\TemplateEngine\TemplateEngineInterface;
 use InvalidArgumentException;
 use JsonSerializable;
-use Laminas\Diactoros\ResponseFactory;
 use Laminas\Diactoros\Stream;
-use ActiveCollab\Sitemap\RoutingContext\RoutingContextInterface;
-use ActiveCollab\Sitemap\Sitemap\SitemapInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use RuntimeException;
-use Slim\Interfaces\RouteInterface;
 
-trait NodeMiddlewareTrait
+trait HttpRequestHandlerTrait
 {
-    use ContainerAccessImplementation;
-
-    private string $routeKey = NodeMiddlewareInterface::DEFAULT_ROUTE_KEY;
-    private SitemapInterface $sitemap;
-
-    public function getRouteKey(): string
-    {
-        return $this->routeKey;
-    }
-
-    protected function setRouteKey(string $routeKey): NodeMiddlewareInterface
-    {
-        $this->routeKey = $routeKey;
-
-        return $this;
-    }
-
-    private ?TemplateVariablesProcessorInterface $templateVariablesProcessor = null;
-
-    public function getTemplateVariablesProcessor(): TemplateVariablesProcessorInterface
-    {
-        if (empty($this->templateVariablesProcessor)) {
-            $this->templateVariablesProcessor = new TemplateVariablesProcessor();
-        }
-
-        return $this->templateVariablesProcessor;
-    }
-
     public function ok(string $reasonPhrase = ''): ResponseInterface
     {
         return $this->status(200, $reasonPhrase);
@@ -128,20 +96,6 @@ trait NodeMiddlewareTrait
         return $this->json($entity, 201, $response);
     }
 
-    public function movedToRoute(
-        string $routeName,
-        array $data = [],
-        bool $isMovedPermanently = false,
-        ResponseInterface $response = null
-    ): ResponseInterface
-    {
-        return $this->moved(
-            $this->getSitemap()->absoluteUrlFor($routeName, $data),
-            $isMovedPermanently,
-            $response
-        );
-    }
-
     public function moved(
         string $url,
         bool $isMovedPermanently = false,
@@ -162,17 +116,17 @@ trait NodeMiddlewareTrait
             ->withHeader('HX-Location', $url);
     }
 
-    public function redirectToRoute(
-        ServerRequestInterface $request,
+    public function movedToRoute(
         string $routeName,
         array $data = [],
+        bool $isMovedPermanently = false,
         ResponseInterface $response = null,
     ): ResponseInterface
     {
-        return $this->redirect(
-            $request,
+        return $this->moved(
             $this->getSitemap()->absoluteUrlFor($routeName, $data),
-            $response,
+            $isMovedPermanently,
+            $response
         );
     }
 
@@ -199,6 +153,20 @@ trait NodeMiddlewareTrait
             ->withHeader('Location', $url);
     }
 
+    public function redirectToRoute(
+        ServerRequestInterface $request,
+        string $routeName,
+        array $data = [],
+        ResponseInterface $response = null,
+    ): ResponseInterface
+    {
+        return $this->redirect(
+            $request,
+            $this->getSitemap()->absoluteUrlFor($routeName, $data),
+            $response,
+        );
+    }
+
     public function renderContent(
         string $content,
         int $statusCode = 200,
@@ -219,6 +187,17 @@ trait NodeMiddlewareTrait
             ->withBody($stream);
     }
 
+    private ?TemplateVariablesProcessorInterface $templateVariablesProcessor = null;
+
+    public function getTemplateVariablesProcessor(): TemplateVariablesProcessorInterface
+    {
+        if ($this->templateVariablesProcessor === null) {
+            $this->templateVariablesProcessor = new TemplateVariablesProcessor();
+        }
+
+        return $this->templateVariablesProcessor;
+    }
+
     public function renderTemplate(
         string $templatePath,
         array $templateVariables = [],
@@ -228,7 +207,7 @@ trait NodeMiddlewareTrait
     ): ResponseInterface
     {
         return $this->renderContent(
-            $this->get(TemplateEngineInterface::class)->fetch(
+            $this->getTemplateEngine()->fetch(
                 $templatePath,
                 $this->getTemplateVariablesProcessor()->process($templateVariables),
             ),
@@ -236,54 +215,6 @@ trait NodeMiddlewareTrait
             $reasonPhrase,
             $response,
         );
-    }
-
-    protected function getRoute(ServerRequestInterface $request): RouteInterface
-    {
-        $route = $request->getAttribute($this->routeKey);
-
-        if (!$route instanceof RouteInterface) {
-            throw new RuntimeException('Failed to find route in request.');
-        }
-
-        return $route;
-    }
-
-    protected function isRoute(
-        ServerRequestInterface $request,
-        string $nodeName,
-        string $requestMethod = null
-    ): bool
-    {
-        $route = $this->getRoute($request);
-
-        if ($requestMethod !== null && $request->getMethod() !== $requestMethod) {
-            return false;
-        }
-
-        if ($route->getArgument(SitemapInterface::NODE_NAME_ROUTE_ARGUMENT) !== $nodeName) {
-            return false;
-        }
-
-        return true;
-    }
-
-    protected function isTypeRoute(
-        ServerRequestInterface $request,
-        RoutingContextInterface $context,
-        string $nodeName = 'index',
-        string $requestMethod = null,
-    ): bool
-    {
-        if ($requestMethod !== null && $request->getMethod() !== $requestMethod) {
-            return false;
-        }
-
-        return sprintf(
-            '%s_%s',
-            $context->getRoutePrefix(),
-            $nodeName
-        ) === $this->getRoute($request)->getName();
     }
 
     protected function isMethod(ServerRequestInterface $request, string $requestMethod): bool
@@ -329,36 +260,6 @@ trait NodeMiddlewareTrait
         return $this->isMethod($request, 'DELETE');
     }
 
-    private string $posMethodOverride = NodeMiddlewareInterface::DEFAULT_POST_OVERRIDE_FIELD_NAME;
-
-    protected function getPostMethodOverride(): ?string
-    {
-        return $this->posMethodOverride;
-    }
-
-    protected function setPostMethodOverride(?string $postMethodOverride): NodeMiddlewareInterface
-    {
-        $this->posMethodOverride = $postMethodOverride;
-
-        return $this;
-    }
-
-    private ResponseFactoryInterface $responseFactory;
-
-    protected function getResponseFactory(): ResponseFactoryInterface
-    {
-        if (empty($this->responseFactory)) {
-            $this->responseFactory = new ResponseFactory();
-        }
-
-        return $this->responseFactory;
-    }
-
-    protected function getSitemap(): SitemapInterface
-    {
-        return $this->getContainer()->get(SitemapInterface::class);
-    }
-
     protected function getIpAddress(ServerRequestInterface $request): ?string
     {
         return $request->getAttribute('ipAddress');
@@ -369,13 +270,21 @@ trait NodeMiddlewareTrait
         return !empty($request->getHeader('HX-Request'));
     }
 
-    /**
-     * @template TClassName
-     * @param  class-string<TClassName> $id
-     * @return TClassName
-     */
-    public function get(string $id): mixed
+    private string $posMethodOverride = HttpRequestHandlerInterface::DEFAULT_POST_OVERRIDE_FIELD_NAME;
+
+    protected function getPostMethodOverride(): ?string
     {
-        return $this->getContainer()->get($id);
+        return $this->posMethodOverride;
     }
+
+    protected function setPostMethodOverride(?string $postMethodOverride): static
+    {
+        $this->posMethodOverride = $postMethodOverride;
+
+        return $this;
+    }
+
+    abstract protected function getResponseFactory(): ResponseFactoryInterface;
+    abstract protected function getSitemap(): SitemapInterface;
+    abstract protected function getTemplateEngine(): TemplateEngineInterface;
 }
