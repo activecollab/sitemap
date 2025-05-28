@@ -17,9 +17,8 @@ use ActiveCollab\Sitemap\Sitemap\SitemapInterface;
 use ActiveCollab\TemplateEngine\TemplateEngineInterface;
 use Laminas\Diactoros\ResponseFactory;
 use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 
-abstract class InvokableHandler extends Handler implements InvokableHandlerInterface, RequestHandlerInterface
+abstract class InvokableHandler extends Handler implements InvokableHandlerInterface
 {
     use HttpRequestHandlerTrait;
     use ContainerAccessImplementation;
