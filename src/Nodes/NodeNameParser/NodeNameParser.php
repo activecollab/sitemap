@@ -71,4 +71,29 @@ class NodeNameParser implements NodeNameParserInterface
             $this->is_variable,
         ];
     }
+
+    public function getNodeName(): string
+    {
+        return $this->node_name;
+    }
+
+    public function getExtension(): string
+    {
+        return $this->extension;
+    }
+
+    public function isHidden(): bool
+    {
+        return $this->is_hidden;
+    }
+
+    public function isSystem(): bool
+    {
+        return $this->is_system;
+    }
+
+    public function isVariable(): bool
+    {
+        return $this->is_variable;
+    }
 }

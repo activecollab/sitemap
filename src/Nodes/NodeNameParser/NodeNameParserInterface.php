@@ -14,4 +14,9 @@ interface NodeNameParserInterface
 {
     public function getFileProperties(): array;
     public function getDirectoryProperties(): array;
+    public function getNodeName(): string;
+    public function getExtension(): string;
+    public function isHidden(): bool;
+    public function isSystem(): bool;
+    public function isVariable(): bool;
 }
