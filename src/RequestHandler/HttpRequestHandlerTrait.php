@@ -21,6 +21,7 @@ use Laminas\Diactoros\Stream;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
 
 trait HttpRequestHandlerTrait
 {
@@ -260,9 +261,26 @@ trait HttpRequestHandlerTrait
         return $this->isMethod($request, 'DELETE');
     }
 
-    protected function getIpAddress(ServerRequestInterface $request): ?string
+    protected function getIpAddress(
+        ServerRequestInterface $request,
+        string $attributeName = 'ipAddress',
+    ): ?string
     {
-        return $request->getAttribute('ipAddress');
+        return $request->getAttribute($attributeName);
+    }
+
+    protected function mustGetIpAddress(
+        ServerRequestInterface $request,
+        string $attributeName = 'ipAddress',
+    ): string
+    {
+        $ipAddress = $this->getIpAddress($request, $attributeName);
+
+        if (empty($ipAddress)) {
+            throw new RuntimeException('IP address is not set in the request attributes.');
+        }
+
+        return $ipAddress;
     }
 
     protected function isHtmxRequest(ServerRequestInterface $request): bool
